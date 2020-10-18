@@ -15,6 +15,7 @@ Install using pip:
 
 $ pip install Flask-API
 
+Also install numpy,sklearn,matpolib to use machine learning functionality
 Import and initialize your application:
 
 from flask_api import FlaskAPI

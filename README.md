@@ -1,4 +1,4 @@
-# ELHackathonBCS
+# BreastCancerSolutionAPI
 BreastCancerSolution
 An Python Api developed using Flask framework to Detect Breast cancer at early stages by just getting inputs from the user.
 We have used machine Learning to predict the risk of the patient and also to Group the patients into different Clusters.

@@ -1,0 +1,235 @@
+{
+	"info": {
+		"_postman_id": "d7a9e8f6-9501-4bc6-85cf-0af3a529185f",
+		"name": "B-CareSolution",
+		"description": "Postman collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Registration_Request",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"userName\":\"sugan\",\r\n\"emailId\": \"sugan@gmail.com\",\r\n\"password\": \"sugan123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/register",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login_Request",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"email\": \"vijayjeyakumar@gmail.com\",\r\n\"password\": \"vijay123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/login",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ChatBot",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n      \"question\":\"what causes breast cancer?\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/chatbot/chat",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"chatbot",
+						"chat"
+					]
+				},
+				"description": "Has 2 types of request.\r\n1.To chat.\r\n2.To fix appointment"
+			},
+			"response": []
+		},
+		{
+			"name": "ChatBot Appointment fix",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"emailId\": \"vijayjeyakumar@gmail.com\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/chatBot/appointment",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"chatBot",
+						"appointment"
+					]
+				},
+				"description": "Has 2 types of request.\r\n1.To chat.\r\n2.To fix appointment"
+			},
+			"response": []
+		},
+		{
+			"name": "Profile Data Check",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"emailId\": \"vijayjeyakumar@gmail.com\"\r\n}   ",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/profiledatacheck",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"profiledatacheck"
+					]
+				},
+				"description": "Has 2 types of request.\r\n1.To chat.\r\n2.To fix appointment"
+			},
+			"response": []
+		},
+		{
+			"name": "Exercise Data Check",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"emailId\": \"vijayjeyakumar@gmail.com\"\r\n}   ",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/exercisedatacheck",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"exercisedatacheck"
+					]
+				},
+				"description": "Has 2 types of request.\r\n1.To chat.\r\n2.To fix appointment"
+			},
+			"response": []
+		},
+		{
+			"name": "Exercise Data Update",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"emailId\": \"vijayjeyakumar@gmail.com\",\r\n\"exerciseDone\":\"Yes\"\r\n}   ",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/exercisedataupdate",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"exercisedataupdate"
+					]
+				},
+				"description": "Has 2 types of request.\r\n1.To chat.\r\n2.To fix appointment"
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}

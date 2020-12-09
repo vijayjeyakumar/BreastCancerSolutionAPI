@@ -14,7 +14,6 @@ import pymysql
 import pymysql.cursors
 from datetime import date
 from flask_cors import CORS, cross_origin
-
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -22,6 +21,10 @@ from matplotlib import ft2font
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
 
 pymysql.install_as_MySQLdb()
 
@@ -34,10 +37,10 @@ CORS(app)
 
 # Function to form connection
 def GetDbConnectionDetails():
-    conn = pymysql.connect(host="bcsdatabase.checsubgcuu9.ap-south-1.rds.amazonaws.com",
+    conn = pymysql.connect(host="aptitudebuddydb1.cda1nryde4k9.us-east-2.rds.amazonaws.com",
                            user="admin",
-                           passwd="hackforpinkdb",
-                           db="backend_bcs")
+                           passwd="AptitudeBuddyDBpass",
+                           db="aptitudebuddy_db")
     cursor = conn.cursor()
     return cursor
 
@@ -46,38 +49,38 @@ def GetDbConnectionDetails():
 @app.route('/')
 # To enable cross origin
 @cross_origin()
-def BaseFunction():
+def TestFunction():
     return jsonify({'Answer': "Hello"}), 200
 
 
 # LOGIN FUNCTIONALITY
-@app.route('/Login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 @cross_origin()
 def LoginFunction():
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    UserName = json_data["UserName"]
-    Password = json_data["Password"]
+    email = json_data["email"]
+    Password = json_data["password"]
 
     # Calling Get connection details to get cursor Object
     cursorVal = GetDbConnectionDetails()
-    print(UserName)
+    print(email)
 
     # Executing Query
-    Query = "select * from UserDetails where EmailId =%s"
-    cursorVal.execute(Query, UserName)
-
-    # Print Row count
-    print("Total number of rows in Laptop is: ", cursorVal.rowcount)
+    Query = "select password from UserDetails where EmailId =%s"
+    cursorVal.execute(Query, email)
 
     # Loop Between Rows Using Tuple and validate
     rows = cursorVal.fetchall()
     for row in rows:
-        print(row[1], row[2])
-        if cursorVal.rowcount != 0 & row[1] == row[2]:
+        print(row[0])
+        if row[0] == Password:
             Resp = "Login Successful"
         else:
             Resp = "Login Failed"
+
+    if cursorVal.rowcount == 0:
+        Resp = "Login Failed"
 
     # close connection
     cursorVal.close()
@@ -86,43 +89,36 @@ def LoginFunction():
 
 
 # REGISTER TO WEBSITE FUNCTIONALITY
-@app.route('/Register', methods=['POST'])
+@app.route('/register', methods=['POST'])
 @cross_origin()
 def Register():
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    EmailId = json_data["EmailId"]
-    Password = json_data["EmailId"]
-    # Establishing connection
-    conn = pymysql.connect(host="bcsdatabase.checsubgcuu9.ap-south-1.rds.amazonaws.com",
-                           user="admin",
-                           passwd="hackforpinkdb",
-                           db="backend_bcs")
+    userName = json_data["userName"]
+    EmailId = json_data["emailId"]
+    Password = json_data["password"]
+
+    # Establishing connection and executing query
+    conn = pymysql.connect(host="aptitudebuddydb1.cda1nryde4k9.us-east-2.rds.amazonaws.com", user="admin",
+                           passwd="AptitudeBuddyDBpass", db="aptitudebuddy_db")
     cursorVal = conn.cursor()
+    Query = "INSERT INTO `UserDetails` (`emailId`,`password`,`userName`) VALUES (%s,%s,%s)"
+    cursorVal.execute(Query, (EmailId, Password, userName))
 
-    # Executing Query
-    Query = "INSERT INTO `UserDetails` (`EmailId`,`Password`) VALUES (%s,%s)"
-    cursorVal.execute(Query, (EmailId, Password))
-
-    # Print Cursor Object
-    print("Cursor Object: ", cursorVal)
-
-    # commit changes
+    # commit changes and close connection
     conn.commit()
-
-    # close connection
     cursorVal.close()
 
     return jsonify({'Response': "Registered Successfully"}), 200
 
 
 # CHAT BOT FUNCTIONALITY
-@app.route('/ChatBot/chat', methods=['POST'])
+@app.route('/chatbot/chat', methods=['POST'])
 @cross_origin()
 def Dictionary():
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    Question = json_data["Question"]
+    Question = json_data["question"]
     Question = Question.lower()
 
     # Default Answer if Nothing matches
@@ -147,10 +143,14 @@ def Dictionary():
                                                                              "you should talk to your primary care "
                                                                              "physician or OB/GYN.",
 
-        "what is your name ": "My Name is Pink Bot",
-        "Fix an appointment with doctor": "An appointment is Fixed with the Doctor tomorrow "
+        "what is your name": "My Name is Pink Bot",
+        "breast cancer": "Breast cancer can occur in women and rarely in men.Symptoms of breast cancer include a lump in the breast, bloody discharge from the nipple, and changes in the shape or texture of the nipple or breast.",
+        "breast cancer treatment": "Treatment depends on the stage of cancer. It may consist of chemotherapy, radiation, and surgery.",
+        "Can breast cancer kill you?": "More than 41,000 women are expected to die from the disease.",
+        "types of breast cancer": "Types of breast cancer include ductal carcinoma in situ, invasive ductal carcinoma, inflammatory breast cancer, and metastatic breast cancer."
 
     }
+
     # Looping in Dictionary to Find Match
     for x in ChatDic:
         print(x, file=sys.stderr)
@@ -158,28 +158,51 @@ def Dictionary():
             Response = ChatDic.get(x)
             print(Response, file=sys.stderr)
             break
-    if re.search(Question, "Fix an appointment with doctor"):
-        CurrentDate = date.today() + timedelta(days=1)
-        CurrentDate1 = str(CurrentDate)
-        Response = "An appointment is Fixed with the Doctor on " + CurrentDate1 + " at 10 AM "
+
+    return jsonify({'Answer': Response}), 200
+
+
+@app.route('/chatBot/appointment', methods=['POST'])
+@cross_origin()
+def fixAppointment():
+    json_data = flask.request.json
+    emailId = json_data["emailId"]
+
+    # Calling Get connection details to get cursor Object
+    conn = pymysql.connect(host="aptitudebuddydb1.cda1nryde4k9.us-east-2.rds.amazonaws.com",
+                           user="admin",
+                           passwd="AptitudeBuddyDBpass",
+                           db="aptitudebuddy_db")
+    cursorVal = conn.cursor()
+    Query = "select userName from  `UserDetails` where emailId= %s"
+    userName = cursorVal.execute(Query, emailId)
+
+    CurrentDate = date.today() + timedelta(days=1)
+    CurrentDate1 = str(CurrentDate)
+    Response = "An appointment is Fixed with the Doctor on " + CurrentDate1 + " at 10 AM "
+
+    Query1 = "UPDATE UserDetails SET appointment = %s WHERE emailId=%s"
+    cursorVal.execute(Query1, (CurrentDate1, emailId))
+    conn.commit()
+    conn.close()
 
     return jsonify({'Answer': Response}), 200
 
 
 # PROFILE DATA FUNCTIONALITY API CALL 1 TO CHECK
-@app.route('/ProfileDataCheck', methods=['POST'])
+@app.route('/profiledatacheck', methods=['POST'])
 @cross_origin()
-def FetchProfileDataFunction():
+def fetch_profile_data_function():
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    EmailId = json_data["EmailId"]
+    EmailId = json_data["emailId"]
 
     # Calling Get connection details to get cursor Object
     cursorVal = GetDbConnectionDetails()
     print(cursorVal)
 
     # Executing Query and store in count to check user EmailId present in db or not
-    Query = "Select CLUSTERDATA, USERSCLUSTER from UserDetails where EmailId=%s"
+    Query = "Select userCluster from UserDetails where EmailId=%s"
     Count = cursorVal.execute(Query, EmailId)
 
     # Creating an empty dictionary to send response
@@ -194,8 +217,13 @@ def FetchProfileDataFunction():
         print(record)
         # Loop to add data into dictionary
         for row in record:
-            RespDict["ClusterData"] = row[0]
-            RespDict["UserCluster"] = row[1]
+            RespDict["UserCluster"] = row[0]
+
+    fetchClusterDetailsQuery = "select clusterData from clusterData"
+    cursorVal.execute(fetchClusterDetailsQuery)
+    record1 = cursorVal.fetchall()
+    for row in record1:
+        RespDict["ClusterData"] = row[0]
 
     # close connection
     cursorVal.close()
@@ -204,34 +232,34 @@ def FetchProfileDataFunction():
 
 
 # PROFILE DATA FUNCTIONALITY API CALL 2 TO UPDATE DATA, IDENTIFY CLUSTER USING MACHINE LEARNING, FIND PROBABILITY
-@app.route('/ProfileDataSubmission', methods=['POST'])
+@app.route('/quickcheckup', methods=['POST'])
 @cross_origin()
 def ClusterIdentificationAndProbabilty():
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    EmailId = json_data["EmailId"]
-    FirstName = json_data["UserName"]
-    Age = json_data["Age"]
-    Weight = json_data["Weight"]
-    Symptoms = json_data["Symptoms"]
-    Gender = json_data["Gender"]
-    FoodHabit = json_data["FoodHabit"]
-    FamilyHistoryOfCancer = json_data["FamilyHistoryOfCancer"]
-    PersonaHistoryOfCancer = json_data["PersonaHistoryOfCancer"]
-    AlcoholConsumption = json_data["AlcoholConsumption"]
-    ExposureToRadiation = json_data["ExposureToRadiation"]
-    BreastFeeding = json_data["BreastFeeding"]
-    OccupationInvolvesPhysicalActivity = json_data["OccupationInvolvesPhysicalActivity"]
-    Menopause = json_data["Menopause"]
-    HarmonalUse = json_data["HarmonalUse"]
-    Postmenopausal = json_data["Postmenopausal"]
-    Pregnant = json_data["Pregnant"]
-    Ethnicity = json_data["Ethnicity"]
-    Height = json_data["Height"]
-    DiagnosticTest = json_data["DiagnosticTest"]
-    AgeOfFirstPregnancy = json_data["AgeOfFirstPregnancy"]
-    WhichDiagnosticTest = json_data["WhichDiagnosticTest"]
-    DiagnosticResultNegative = json_data["DiagnosticResultNegative"]
+    EmailId = json_data["emailId"]
+    Age = json_data["age"]
+    FoodHabit = json_data["foodHabit"]
+    FamilyHistoryOfCancer = json_data["familyHistoryOfCancer"]
+    PersonaHistoryOfCancer = json_data["personaHistoryOfCancer"]
+    FirstMenstrualAge = json_data["firstMenstrualAge"]
+    ExposureToRadiation = json_data["exposureToRadiation"]
+    BreastFeeding = json_data["breastFeeding"]
+    OccupationInvolvesPhysicalActivity = json_data["occupationInvolvesPhysicalActivity"]
+    Menopause = json_data["menopause"]
+    Postmenopausal = json_data["postmenopausal"]
+    Pregnant = json_data["pregnant"]
+    AgeOfFirstPregnancy = json_data["ageOfFirstPregnancy"]
+    DiagnosticResultNegative = json_data["diagnosticResultNegative"]
+    WhichDiagnosticTest = json_data["whichDiagnosticTest"]
+    Ethnicity = json_data["ethnicity"]
+    Height = json_data["height"]
+    DiagnosticTest = json_data["diagnosticTest"]
+    HarmonalUse = json_data["harmonalUse"]
+    Weight = json_data["weight"]
+    Symptoms = json_data["symptoms"]
+    Gender = json_data["gender"]
+    userName = json_data["userName"]
 
     # Changing to 1 or 0 based on input
     if FamilyHistoryOfCancer == "Yes":
@@ -243,11 +271,6 @@ def ClusterIdentificationAndProbabilty():
         PersonaHistoryOfCancer = 1
     else:
         PersonaHistoryOfCancer = 0
-
-    if AlcoholConsumption == "Yes":
-        AlcoholConsumption = 1
-    else:
-        AlcoholConsumption = 0
 
     if ExposureToRadiation == "Yes":
         ExposureToRadiation = 1
@@ -274,47 +297,104 @@ def ClusterIdentificationAndProbabilty():
     else:
         OccupationInvolvesPhysicalActivity = 0
 
+    if Postmenopausal == "Yes":
+        Postmenopausal = 0
+    else:
+        Postmenopausal = 1
+
+    if FoodHabit == "veg":
+        FoodHabit = 0
+    else:
+        FoodHabit = 1
+
     if DiagnosticResultNegative == "Yes":
         DiagnosticResultNegative = 0
     else:
         DiagnosticResultNegative = 1
+    print(Age, PersonaHistoryOfCancer, FamilyHistoryOfCancer, ExposureToRadiation, FirstMenstrualAge,
+          AgeOfFirstPregnancy)
 
     # CLUSTERING USER BASED ON THE INPUTS PROVIDED
     dataset = pd.read_csv(f'C:\\Users\\vijay.jeyakumar\\Desktop\\Breast_Cancer_Symptom.csv')
     X = dataset.iloc[:, :-1].values
     y = dataset.iloc[:, -1].values
-
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
-
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train)
     X_test = sc.transform(X_test)
-
     classifier = KNeighborsClassifier(n_neighbors=5, metric='minkowski', p=2)
     classifier.fit(X_train, y_train)
     UserCluster = classifier.predict(
-        sc.transform([[Age, AlcoholConsumption, ExposureToRadiation, BreastFeeding, Menopause, Pregnant, OccupationInvolvesPhysicalActivity, 500, DiagnosticResultNegative, 1, 8, FamilyHistoryOfCancer, PersonaHistoryOfCancer, 0, AgeOfFirstPregnancy, 1]]))
+        sc.transform([[DiagnosticResultNegative, FoodHabit, Postmenopausal, ExposureToRadiation, BreastFeeding,
+                       Menopause, Pregnant,
+                       OccupationInvolvesPhysicalActivity, Age,
+                       FirstMenstrualAge, FamilyHistoryOfCancer, PersonaHistoryOfCancer, FamilyHistoryOfCancer,
+                       AgeOfFirstPregnancy, 1, 1]]))
 
+    UserCluster = int(UserCluster[0])
     print(UserCluster)
 
-    return jsonify({'UserCluster': "UserCluster"}), 200
+    # CALCULATE PROBABILITY USING  Age	Personal history	Family history	Gene mutation	Age at first menstrual	Age at first child
+    Age = int(Age)
+    FirstMenstrualAge = int(FirstMenstrualAge)
+    AgeOfFirstPregnancy = int(AgeOfFirstPregnancy)
+
+    dataset = pd.read_csv(f'C:\\Users\\vijay.jeyakumar\\Desktop\\PredictionDataset.csv')
+    X = dataset.iloc[:, :-2].values
+    y = dataset.iloc[:, -1].values
+    ct = ColumnTransformer(transformers=[('encoder', OneHotEncoder(), [6])], remainder='passthrough')
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    regressor = LinearRegression()
+    regressor.fit(X_train, y_train)
+    # give input in the form of 2d array
+    y_pred = regressor.predict([[Age, PersonaHistoryOfCancer, FamilyHistoryOfCancer, ExposureToRadiation,
+                                 FirstMenstrualAge, AgeOfFirstPregnancy]])
+    BC_probability = y_pred
+
+    BC_probability = int(BC_probability[0])
+    print(BC_probability)
+
+    # Input cluster and Probability of cancer into database for future reference
+    # Establishing connection and executing query
+    conn = pymysql.connect(host="aptitudebuddydb1.cda1nryde4k9.us-east-2.rds.amazonaws.com", user="admin",
+                           passwd="AptitudeBuddyDBpass", db="aptitudebuddy_db")
+    cursorVal = conn.cursor()
+    Query = "UPDATE UserDetails SET probability = %s, userCluster = %s where emailId= %s"
+    cursorVal.execute(Query, (BC_probability, UserCluster, EmailId))
+    # commit changes and close connection
+    conn.commit()
+    cursorVal.close()
+
+    # Fetch Clusterdata to form graph
+    conn = pymysql.connect(host="aptitudebuddydb1.cda1nryde4k9.us-east-2.rds.amazonaws.com", user="admin",
+                           passwd="AptitudeBuddyDBpass", db="aptitudebuddy_db")
+    cursorVal = conn.cursor()
+    Query1 = "select clusterData from clusterData"
+    cursorVal.execute(Query1)
+    record1 = cursorVal.fetchall()
+    for row in record1:
+        ClusterData = row[0]
+    # commit changes and close connection
+    cursorVal.close()
+
+    return jsonify({'userCluster': UserCluster, 'probability': BC_probability, 'clusterData': ClusterData}), 200
 
 
 # EXERCISE DATA FUNCTIONALITY API CALL 1 TO CHECK PREVIOUS EXERCISE DATA AND GAP
-@app.route('/ExerciseDataCheck', methods=['POST'])
+@app.route('/exercisedatacheck', methods=['POST'])
 @cross_origin()
 def ExerciseDataCheck():
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    EmailId = json_data["EmailId"]
+    emailId = json_data["emailId"]
 
     # Calling Get connection details to get cursor Object
     cursorVal = GetDbConnectionDetails()
     print(cursorVal)
 
     # Executing Query and store in count to check user EmailId present in db or not
-    Query = "Select * from UserExcerciseData where EmailId=%s"
-    Count = cursorVal.execute(Query, EmailId)
+    Query = "Select * from UserExcerciseData where emailId=%s"
+    Count = cursorVal.execute(Query, emailId)
 
     # Creating an empty dictionary to send response
     RespDict = {}
@@ -339,18 +419,20 @@ def ExerciseDataCheck():
 
 
 # EXERCISE DATA FUNCTIONALITY API CALL 2 TO CHECK PREVIOUS EXERCISE DATA AND USE IT TO UPDATE DAY COUNT AND GAP
-@app.route('/ExerciseDataUpdate', methods=['POST'])
+@app.route('/exercisedataupdate', methods=['POST'])
 @cross_origin()
 def ExerciseDataUpdate():
     datetimeFormat = '%Y-%m-%d'
-    LatestTimeStamp = date.today()
     # Fetching Json Request From FrontEnd
     json_data = flask.request.json
-    EmailId = json_data["EmailId"]
-    ExerciseDone = json_data["ExerciseDone"]
+    emailId = json_data["emailId"]
+    ExerciseDone = json_data["exerciseDone"]
+
+    # initialing
+    LatestTimeStamp = date.today()
+    print(LatestTimeStamp)
     CurrentDayCount = 0
     TimeStamp = ""
-
     # Set count as 0 initially
     TodayCount = 0
 
@@ -358,54 +440,49 @@ def ExerciseDataUpdate():
         TodayCount = 1
         CurrentDate = date.today()
         CurrentDateString = str(CurrentDate)
+    print("today's date", CurrentDate)
 
     # Establishing connection
-    conn = pymysql.connect(host="bcsdatabase.checsubgcuu9.ap-south-1.rds.amazonaws.com",
-                           user="admin",
-                           passwd="hackforpinkdb",
-                           db="backend_bcs")
+    conn = pymysql.connect(host="aptitudebuddydb1.cda1nryde4k9.us-east-2.rds.amazonaws.com", user="admin",
+                           passwd="AptitudeBuddyDBpass", db="aptitudebuddy_db")
     cursorVal = conn.cursor()
-
     # Executing Query and store in count to check user EmailId present in db or not
-    Query = "Select * from UserExcerciseData where EmailId=%s"
-    Count = cursorVal.execute(Query, EmailId)
-    print(Count)
+    Query = "Select * from UserExcerciseData where emailId=%s"
+    Count = cursorVal.execute(Query, emailId)
 
-    # Find Day count and Gap for new user and old one
+    # Find Day count and Gap for new user and old one ...When a new user just starts
     if Count == 0:
         FinalDayCount = 1
         CurrentGap = 0
-        Flag = 1
-
+        Query1 = "INSERT INTO `UserExcerciseData` (`excerciseDayCount`,`gap`,`lastExerciseTimeStamp`,`emailId`) VALUES (%s,%s,%s,%s)"
+        cursorVal.execute(Query1, (FinalDayCount, CurrentGap, LatestTimeStamp, emailId))
     else:
         # Fetch Record from CursorVal
         record = cursorVal.fetchall()
         print(record)
         # Loop to add data into dictionary
         for row in record:
-            CurrentDayCount = row[1]
-            CurrentGap = row[2]
-            TimeStamp = row[3]
+            TimeStamp = row[1]
+            CurrentDayCount = row[2]
+            CurrentGap = row[3]
 
     # Calculate gap and Total Days Done and Update it in Database
-    FinalDayCount = int(CurrentDayCount) + TodayCount
-    CurrentGap = datetime.strptime(CurrentDateString, datetimeFormat) - datetime.strptime(TimeStamp, datetimeFormat)
-    LatestTimeStamp = date.today()
-    print("FinalDayCount", FinalDayCount)
-    print("New Gap", CurrentGap)
-    CurrentGap = str(CurrentGap)
-    CurrentGap = CurrentGap[0:1]
-    print(CurrentGap)
+    print(CurrentDayCount)
+    print(TimeStamp)
+
+    if Count != 0:
+        FinalDayCount = int(CurrentDayCount) + TodayCount
+        CurrentGap = datetime.strptime(CurrentDateString, datetimeFormat) - datetime.strptime(TimeStamp, datetimeFormat)
+        print("FinalDayCount", FinalDayCount)
+        print("New Gap", CurrentGap)
+        CurrentGap = str(CurrentGap)
+        CurrentGap = CurrentGap[0:1]
+        print(CurrentGap)
 
     # Update the Latest Values in Database and send Response
-    Query = "UPDATE UserExcerciseData SET ExcerciseDayCount = %s, Gap = %s , TimeStamp= %s where EmailId=%s"
-
-    Count = cursorVal.execute(Query, (FinalDayCount, CurrentGap, LatestTimeStamp, EmailId))
-
-    # commit changes
+    Query = "UPDATE UserExcerciseData SET excerciseDayCount = %s, gap = %s , lastExerciseTimeStamp= %s where emailId=%s"
+    cursorVal.execute(Query, (FinalDayCount, CurrentGap, LatestTimeStamp, emailId))
     conn.commit()
-
-    # close connection
     cursorVal.close()
 
     return jsonify({'DaysExercised': FinalDayCount, 'Gap': CurrentGap}), 200
@@ -416,4 +493,3 @@ if __name__ == '__main__':
     app.run(host=None, port=5000, debug=True)
 # Required to server from server
 # serve(app, host='0.0.0.0', port=8080, threads=1)  # WAITRESS!
-
